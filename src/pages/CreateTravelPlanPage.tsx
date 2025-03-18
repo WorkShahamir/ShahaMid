@@ -1,0 +1,200 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Box, 
+  Button, 
+  TextField, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem, 
+  IconButton, 
+  Typography,
+  InputAdornment,
+} from '@mui/material';
+import { SelectChangeEvent } from '@mui/material/Select';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
+import SearchIcon from '@mui/icons-material/Search';
+import { ref, push, set } from 'firebase/database';
+import { db } from '../firebase/config';
+import { getAllCountries } from '../services/countriesService';
+import { TravelPlan, Country } from '../types';
+
+const CreateTravelPlanPage: React.FC = () => {
+  const [plan, setPlan] = useState<Omit<TravelPlan, 'id'>>({
+    name: '',
+    country: '',
+    places: [''],
+  });
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [open, setOpen] = useState<boolean>(false); // Управляем открытием Select
+  const searchInputRef = useRef<HTMLInputElement>(null); // Ссылка на поле поиска
+  const navigate = useNavigate();
+
+  // Загрузка списка стран
+  useEffect(() => {
+    const fetchCountries = async () => {
+      const countriesData = await getAllCountries();
+      setCountries(countriesData);
+      setFilteredCountries(countriesData);
+    };
+    fetchCountries();
+  }, []);
+
+  // Фильтрация стран по поисковому запросу
+  useEffect(() => {
+    const filtered = countries.filter((country) =>
+      country.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredCountries(filtered);
+  }, [searchQuery, countries]);
+
+  // Обработчики изменений
+  const handleCountryChange = (event: SelectChangeEvent<string>) => {
+    setPlan({ ...plan, country: event.target.value as string });
+    setOpen(false); // Закрываем меню после выбора
+  };
+
+  const handlePlaceChange = (index: number, value: string) => {
+    const newPlaces = [...plan.places];
+    newPlaces[index] = value;
+    setPlan({ ...plan, places: newPlaces });
+  };
+
+  const handleAddPlace = () => {
+    setPlan({ ...plan, places: [...plan.places, ''] });
+  };
+
+  const handleRemovePlace = (index: number) => {
+    if (plan.places.length > 1) {
+      const newPlaces = plan.places.filter((_, i) => i !== index);
+      setPlan({ ...plan, places: newPlaces });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (plan.name && plan.country && plan.places.every(place => place.trim())) {
+      try {
+        const travelPlansRef = ref(db, 'travelPlans');
+        const newPlanRef = push(travelPlansRef);
+        await set(newPlanRef, plan);
+        navigate('/');
+      } catch (error) {
+        console.error('Ошибка при создании плана:', error);
+      }
+    } else {
+      alert('Пожалуйста, заполните все поля');
+    }
+  };
+
+  // Обработчик ввода в поле поиска
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Открытие/закрытие Select
+  const handleOpen = () => {
+    setOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 0); // Фокус на поле поиска
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  return (
+    <Box sx={{ p: 4, maxWidth: 600, mx: 'auto' }}>
+      <Typography variant="h4" gutterBottom>
+        Создать план путешествия
+      </Typography>
+
+      <TextField
+        label="Название плана"
+        value={plan.name}
+        onChange={(e) => setPlan({ ...plan, name: e.target.value })}
+        fullWidth
+        sx={{ mb: 3 }}
+      />
+
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel>Выберите страну</InputLabel>
+        <Select
+          value={plan.country}
+          onChange={handleCountryChange}
+          label="Выберите страну"
+          open={open}
+          onOpen={handleOpen}
+          onClose={handleClose}
+          MenuProps={{ PaperProps: { style: { maxHeight: 300 } } }}
+        >
+          <TextField
+            placeholder="Поиск страны..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            fullWidth
+            sx={{ p: 1 }}
+            inputRef={searchInputRef} // Ссылка на поле ввода
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+            onClick={(e) => e.stopPropagation()} // Предотвращаем закрытие при клике
+            onKeyDown={(e) => e.stopPropagation()} // Предотвращаем закрытие при вводе
+          />
+          {filteredCountries.length > 0 ? (
+            filteredCountries.map((country) => (
+              <MenuItem key={country.alpha3Code} value={country.alpha3Code}>
+                {country.name}
+              </MenuItem>
+            ))
+          ) : (
+            <MenuItem disabled>Нет совпадений</MenuItem>
+          )}
+        </Select>
+      </FormControl>
+
+      {plan.places.map((place, index) => (
+        <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <TextField
+            label={`Место ${index + 1}`}
+            value={place}
+            onChange={(e) => handlePlaceChange(index, e.target.value)}
+            fullWidth
+            sx={{ mr: 1 }}
+          />
+          <IconButton
+            onClick={handleAddPlace}
+            color="primary"
+            disabled={index !== plan.places.length - 1}
+          >
+            <AddIcon />
+          </IconButton>
+          <IconButton
+            onClick={() => handleRemovePlace(index)}
+            color="error"
+            disabled={plan.places.length === 1}
+          >
+            <RemoveIcon />
+          </IconButton>
+        </Box>
+      ))}
+
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleSubmit}
+        sx={{ mt: 2 }}
+      >
+        Сохранить
+      </Button>
+    </Box>
+  );
+};
+
+export default CreateTravelPlanPage;
