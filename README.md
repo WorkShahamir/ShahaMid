@@ -21,7 +21,7 @@ Travel Planner — это веб-приложение для создания, �
 - **Axios**: HTTP-запросы к внешним API.
 
 ## Структура проекта
-```
+
 src/
 ├── components/           # Переиспользуемые компоненты
 │   └── TravelPlanCard.tsx # Карточка плана путешествия
@@ -42,7 +42,7 @@ src/
 ## Установка
 1. **Клонируйте репозиторий**:
    ```bash
-   git clone https://github.com/your-username/travel-planner.git
+   git clone ссылка
    cd travel-planner
    ```
 
@@ -61,13 +61,7 @@ src/
      import { getDatabase } from 'firebase/database';
 
      const firebaseConfig = {
-       apiKey: "your-api-key",
-       authDomain: "your-project-id.firebaseapp.com",
        databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
-       projectId: "your-project-id",
-       storageBucket: "your-project-id.appspot.com",
-       messagingSenderId: "your-sender-id",
-       appId: "your-app-id"
      };
 
      const app = initializeApp(firebaseConfig);
@@ -83,16 +77,11 @@ src/
      ```
 
 ## Запуск проекта
-1. **Запустите приложение в режиме разработки**:
+**Запустите приложение в режиме разработки**:
    ```bash
-   npm start
+   npm run dev
    ```
-   Приложение откроется в браузере по адресу `http://localhost:3000`.
-
-2. **Сборка для продакшена** (опционально):
-   ```bash
-   npm run build
-   ```
+   Приложение откроется в браузере.
 
 ## Использование
 1. **Главная страница (`/`)**:
